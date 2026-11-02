@@ -1,0 +1,73 @@
+name: Team bot
+
+# One run = one team bot doing one job: headless Claude Code in a fresh checkout.
+# The router (flow.yml) dispatches this workflow instead of calling a chat bot's
+# webhook; the dev lead dispatches it again for each executor. The run's log,
+# result and cost stay here, and a one-line report goes to the task's Slack thread.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bot:
+        description: Which team bot
+        type: choice
+        options: [product, dev_lead, executor, reviewer, acceptance, outer_loop, process_improvement]
+        required: true
+      payload:
+        description: Wake-up payload (JSON), as the router builds it
+        default: "{}"
+
+permissions:
+  contents: read
+  actions: write          # the dev lead starts executor runs with the workflow token
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # Pushes and PRs go out as the machine account. Its events start other
+          # workflows (CI, the router); the workflow token's events would not.
+          token: ${{ secrets.FLOW_BOT_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: |
+          pip install pyyaml pytest
+          npm install -g @anthropic-ai/claude-code
+          git config user.name "flow-demo-bot"
+          git config user.email "flow-demo-bot@users.noreply.github.com"
+      - name: Build the prompt
+        env:
+          BOT: ${{ inputs.bot }}
+          PAYLOAD: ${{ inputs.payload }}
+        run: python -m flow.role prompt --bot "$BOT" --payload "$PAYLOAD" > "$RUNNER_TEMP/prompt.txt"
+      - name: Claude Code
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ secrets.FLOW_BOT_TOKEN }}
+          FLOW_DISPATCH_TOKEN: ${{ github.token }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
+        run: |
+          claude -p "$(cat "$RUNNER_TEMP/prompt.txt")" \
+            --output-format json \
+            --max-turns 60 \
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(gh:*),Bash(git:*),Bash(python:*),Bash(python3:*),Bash(pytest:*),Bash(ls:*)" \
+            > "$RUNNER_TEMP/result.json" || true
+      - name: Report
+        if: always()
+        env:
+          BOT: ${{ inputs.bot }}
+          PAYLOAD: ${{ inputs.payload }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
+        run: python -m flow.role report --bot "$BOT" --payload "$PAYLOAD" --result "$RUNNER_TEMP/result.json"

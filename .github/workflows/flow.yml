@@ -1,0 +1,71 @@
+name: Flow router
+
+# Every event that can move a task forward ends up here. The router reads
+# rules/rules.yml and decides the next step; no AI is involved in this job.
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  pull_request_target:          # runs the workflow from main, never from the PR
+    types: [opened, reopened, synchronize, closed]
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  check_suite:                  # other apps' checks finishing after CI
+    types: [completed]
+  schedule:
+    - cron: "7 * * * *"         # hourly: timeouts, late checks, daily/weekly jobs
+  workflow_dispatch:
+    inputs:
+      job:
+        description: What to run now
+        type: choice
+        options: [sweep, threads, outer_loop, process_improvement]
+        default: sweep
+
+# Runs go in parallel: a shared concurrency group would keep only one pending
+# run and cancel the rest, dropping events. The one exception is a burst of
+# `issues` events for the same issue (created with several labels): those are
+# grouped per issue, and the run that survives reads the issue's current labels.
+# Runs that race on main rebase and retry.
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  checks: read
+  actions: write               # re-run a failed CI job once; dispatch team-bot jobs (role.yml)
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.event_name == 'issues' && format('flow-issue-{0}', github.event.issue.number) || format('flow-run-{0}', github.run_id) }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          # The deploy key is the only actor allowed to bypass branch protection.
+          # The router uses it to write task status and apply bots' tasks/ PRs.
+          ssh-key: ${{ secrets.FLOW_DEPLOY_KEY }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Route
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
+          SLACK_REQUESTS_CHANNEL: ${{ vars.SLACK_REQUESTS_CHANNEL }}
+        run: |
+          git config user.name "flow-router"
+          git config user.email "flow-router@users.noreply.github.com"
+          EVENT="${GITHUB_EVENT_NAME%_target}"
+          python -m flow.router --event "$EVENT" --payload "$GITHUB_EVENT_PATH" --repo "$GITHUB_REPOSITORY"
