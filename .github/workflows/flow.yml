@@ -47,13 +47,23 @@ jobs:
       group: ${{ github.event_name == 'issues' && format('flow-issue-{0}', github.event.issue.number) || format('flow-run-{0}', github.run_id) }}
       cancel-in-progress: false
     steps:
+      - name: Create router writer token
+        uses: actions/create-github-app-token@v2
+        id: writer
+        with:
+          app-id: ${{ vars.FLOW_APP_ID }}
+          private-key: ${{ secrets.FLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: flow-demo-claude
+          permission-contents: write
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-          # The deploy key is the only actor allowed to bypass branch protection.
-          # The router uses it to write task status and apply bots' tasks/ PRs.
-          ssh-key: ${{ secrets.FLOW_DEPLOY_KEY }}
+          # OneNod-AI disables deploy keys, so the router writes with the App
+          # token, as workflow-hub does. The App is on the ruleset's bypass list,
+          # and the router uses it to write task status and apply bots' tasks/ PRs.
+          token: ${{ steps.writer.outputs.token }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

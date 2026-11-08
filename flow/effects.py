@@ -186,7 +186,7 @@ class LiveEffects:
         self._gh("PATCH", f"/pulls/{number}", {"state": "closed"})
 
     def commit(self, message: str) -> None:
-        # Pushed with the deploy key, the only actor allowed to bypass branch
+        # Pushed with the router App token, the actor allowed to bypass branch
         # protection. The router only writes under tasks/ and records/.
         self._git("add", "tasks", "records")
         if not self._git("status", "--porcelain", "--", "tasks", "records").strip():
