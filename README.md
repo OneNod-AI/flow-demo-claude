@@ -46,5 +46,5 @@ python -m flow.router --event issues --payload some-event.json --dry-run
 ## Required GitHub settings
 
 - Secrets: `FLOW_APP_PRIVATE_KEY` (private key of the GitHub App `onenod-flow-router`, installed on this repository; the router writes with it), `SLACK_BOT_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN` (from `claude setup-token` on a Claude Team seat), `FLOW_BOT_TOKEN` (classic token of the machine account `onenod-flow-bot`, `public_repo` scope; the bot jobs push and comment with it so their events reach CI and the router).
-- Variables: `FLOW_APP_ID`, `SLACK_BOARD_CHANNEL` and `SLACK_REQUESTS_CHANNEL` (channel IDs), optional `FLOW_DEMO_FLAKY_RATE`, optional `FLOW_CLAUDE_MODEL` (model for role jobs the router starts; default `claude-sonnet-5-5`). A manual run of `role.yml` can also pass `model`.
+- Variables: `FLOW_APP_ID`, `SLACK_BOARD_CHANNEL` and `SLACK_REQUESTS_CHANNEL` (channel IDs), optional `FLOW_DEMO_FLAKY_RATE`. Models come from `models` in `rules/rules.yml`; a manual run of `role.yml` can override with the `model` input.
 - Ruleset on `main`: require a pull request with 1 approval and the `test` check; bypass list: the App `onenod-flow-router` (always) and repository admins (pull requests only).

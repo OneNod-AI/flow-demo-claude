@@ -15,12 +15,14 @@ parser.add_argument("--task", required=True)
 parser.add_argument("--slack-thread", default="")
 parser.add_argument("--pr", default=None)
 parser.add_argument("--note", required=True)
+parser.add_argument("--raise-model", action="store_true", help="one step up the model ladder, when the code is harder than the task's risk suggests")
 args = parser.parse_args()
 
 repo = os.environ["GITHUB_REPOSITORY"]
 payload = {"bot": args.bot, "event": "piece.assigned" if args.bot == "executor" else "code_pr.opened",
            "repo": repo, "task": args.task, "issue": None, "pr": args.pr,
-           "slack_thread": args.slack_thread or None, "rulebook": f"bots/{args.bot}.md", "note": args.note}
+           "slack_thread": args.slack_thread or None, "rulebook": f"bots/{args.bot}.md", "note": args.note,
+           "raise_model": args.raise_model}
 req = urllib.request.Request(
     f"https://api.github.com/repos/{repo}/actions/workflows/role.yml/dispatches",
     data=json.dumps({"ref": "main", "inputs": {"bot": args.bot, "payload": json.dumps(payload, ensure_ascii=False)}}).encode(),
