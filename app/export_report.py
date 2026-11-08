@@ -5,7 +5,6 @@ Usage:
 
 Known problems (planted for the demo, do not fix them outside a task):
 - Slow: one customer lookup per order, on an unindexed column.
-- Excel shows Chinese names as garbage: the CSV has no UTF-8 BOM.
 - No date filter and no Excel export.
 """
 from __future__ import annotations
@@ -40,7 +39,7 @@ def fetch_rows(conn: sqlite3.Connection) -> list[list[str]]:
 
 def export_csv(conn: sqlite3.Connection, path: str) -> int:
     rows = fetch_rows(conn)
-    with open(path, "w", encoding="utf-8", newline="") as f:
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:  # utf-8-sig writes the BOM Excel needs
         writer = csv.writer(f)
         writer.writerow(HEADER)
         writer.writerows(rows)
