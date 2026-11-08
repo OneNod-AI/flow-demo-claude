@@ -43,7 +43,7 @@ def env(tmp_path):
     gh = FakeGH()
     fx = FakeEffects(str(tmp_path), gh)
     router = Router(str(tmp_path), "o/flow-demo", fx, gh, now=NOW)
-    router.bot_logins = {"flow-demo-bot"}
+    router.bot_logins = {"onenod-flow-bot"}
     router.rules["review_required"] = False  # the review gate has its own tests below
     return router, gh, fx, tmp_path
 
@@ -91,14 +91,14 @@ def test_accepting_a_candidate_wakes_product(env):
 def test_human_reply_on_clarifying_candidate_wakes_product_but_bot_reply_does_not(env):
     router, _, fx, _ = env
     labels = ["candidate", "clarifying"]
-    router.handle("issue_comment", {"issue": issue(labels), "comment": {"user": {"login": "flow-demo-bot"}, "body": "Q1?"}})
+    router.handle("issue_comment", {"issue": issue(labels), "comment": {"user": {"login": "onenod-flow-bot"}, "body": "Q1?"}})
     assert wakes(fx) == []
     router.handle("issue_comment", {"issue": issue(labels), "comment": {"user": {"login": "alice"}, "body": "Under 1s"}})
     assert wakes(fx) == [("product", "candidate.human_reply")]
 
 
 def open_package_pr(gh):
-    return gh.add_pr(10, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("awaiting-confirmation")})
+    return gh.add_pr(10, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("awaiting-confirmation")})
 
 
 def test_task_package_waits_for_confirmer_then_starts_dev_lead(env):
@@ -139,7 +139,7 @@ def test_approval_card_confirmation_recorded_by_bot(env):
     fake = {"user": {"login": "alice"}, "body": "/confirmed-via-card by @carol at 2026-11-03T01:00:00Z card:1", "html_url": "c0"}
     router.handle("issue_comment", {"issue": pr_issue, "comment": fake})
     assert "close_pr" not in fx.names(), "only the bot account may record card confirmations"
-    real = dict(fake, user={"login": "flow-demo-bot"}, html_url="c1")
+    real = dict(fake, user={"login": "onenod-flow-bot"}, html_url="c1")
     router.handle("issue_comment", {"issue": pr_issue, "comment": real})
     meta = status_of(tmp_path)
     assert meta["status"] == "in-progress"
@@ -149,7 +149,7 @@ def test_approval_card_confirmation_recorded_by_bot(env):
 def test_bot_cannot_jump_status(env):
     router, gh, fx, tmp_path = env
     write_task(tmp_path, "in-progress")
-    pr = gh.add_pr(11, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("closed")})
+    pr = gh.add_pr(11, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("closed")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     assert fx.names() == ["comment"]
     assert status_of(tmp_path)["status"] == "in-progress"
@@ -158,11 +158,11 @@ def test_bot_cannot_jump_status(env):
 def test_plan_update_and_pause_are_merged_without_waiting(env):
     router, gh, fx, tmp_path = env
     write_task(tmp_path, "in-progress")
-    pr = gh.add_pr(12, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("in-progress")})
+    pr = gh.add_pr(12, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("in-progress")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     assert "close_pr" in fx.names()
     fx.calls.clear()
-    pr = gh.add_pr(13, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("paused")})
+    pr = gh.add_pr(13, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("paused")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     assert "close_pr" in fx.names()
     assert any(c[0] == "slack_thread" and "carol" in c[2] for c in fx.calls)
@@ -228,7 +228,7 @@ def test_acceptance_approval_closes_task_and_writes_summary(env):
     router, gh, fx, tmp_path = env
     write_task(tmp_path, "awaiting-acceptance")
     head = task_text("acceptance-proposed", outcome="met")
-    pr = gh.add_pr(30, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": head})
+    pr = gh.add_pr(30, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": head})
     review = {"state": "APPROVED", "user": {"login": "carol"}, "html_url": "r", "submitted_at": None}
     router.handle("pull_request_review", {"review": review, "pull_request": pr})
     meta = status_of(tmp_path)
@@ -274,7 +274,7 @@ def test_bot_pr_from_stale_branch_keeps_router_fields_and_log(env):
     meta, body = taskfile.load(str(tmp_path), "T-001")
     taskfile.save(str(tmp_path), "T-001", meta, taskfile.append_log(body, "router: something happened"))
     stale = task_text("in-progress").replace("## Log\n\n", "## Log\n\n- dev lead: plan written\n")
-    pr = gh.add_pr(14, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": stale})
+    pr = gh.add_pr(14, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": stale})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     meta, body = taskfile.load(str(tmp_path), "T-001")
     assert meta["failures"] == 2 and meta["confirmation"]["by"] == "carol"
@@ -294,7 +294,7 @@ def test_slack_confirmation_is_recorded_with_its_permalink(env):
     link = "https://onenod.slack.com/archives/C0DEMO/p1730000000999999"
     body = f"/confirmed-via-slack by @carol at 2026-11-03T01:00:00Z link:{link}"
     router.handle("issue_comment", {"issue": {"number": 10, "pull_request": {}, "labels": []},
-                                    "comment": {"user": {"login": "flow-demo-bot"}, "body": body, "html_url": "c"}})
+                                    "comment": {"user": {"login": "onenod-flow-bot"}, "body": body, "html_url": "c"}})
     meta = status_of(tmp_path)
     assert meta["status"] == "in-progress"
     assert meta["confirmation"]["via"] == "slack" and meta["confirmation"]["evidence"] == link
@@ -303,7 +303,7 @@ def test_slack_confirmation_is_recorded_with_its_permalink(env):
 def test_relayed_slack_answer_wakes_product_but_other_bot_comments_do_not(env):
     router, _, fx, _ = env
     labels = ["candidate", "clarifying"]
-    bot = {"login": "flow-demo-bot"}
+    bot = {"login": "onenod-flow-bot"}
     router.handle("issue_comment", {"issue": issue(labels), "comment": {"user": bot, "body": "Questions: 1. ..."}})
     assert wakes(fx) == []
     router.handle("issue_comment", {"issue": issue(labels), "comment": {"user": bot, "body": "Answer from @alice (via Slack, https://x): under 1 s"}})
@@ -320,7 +320,7 @@ def ready_to_merge(gh, tmp_path, risk="low", files=("app/export_report.py",)):
 def merge_comment(router, login="mike"):
     body = f"/merge-via-slack by @{login} at 2026-11-03T02:00:00Z link:https://onenod.slack.com/archives/C0DEMO/p1"
     router.handle("issue_comment", {"issue": {"number": 20, "pull_request": {}, "labels": []},
-                                    "comment": {"user": {"login": "flow-demo-bot"}, "body": body, "html_url": "c"}})
+                                    "comment": {"user": {"login": "onenod-flow-bot"}, "body": body, "html_url": "c"}})
 
 
 def test_low_risk_pr_is_merged_from_slack_and_acceptance_starts(env):
@@ -432,7 +432,7 @@ def test_deferred_candidate_bothers_nobody(env):
 def test_pause_remembers_status_and_confirmer_resumes_via_slack(env):
     router, gh, fx, tmp_path = env
     write_task(tmp_path, "in-progress", candidate_issue=37)
-    pr = gh.add_pr(50, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("paused")})
+    pr = gh.add_pr(50, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("paused")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     assert status_of(tmp_path)["paused_from"] == "in-progress"
     fx.calls.clear()
@@ -440,7 +440,7 @@ def test_pause_remembers_status_and_confirmer_resumes_via_slack(env):
     def resume(login):
         body = f"/resume-via-slack T-001 by @{login} at 2026-11-03T03:00:00Z link:https://slack/x"
         router.handle("issue_comment", {"issue": {"number": 37, "labels": [{"name": "candidate"}]},
-                                        "comment": {"user": {"login": "flow-demo-bot"}, "body": body, "html_url": "c"}})
+                                        "comment": {"user": {"login": "onenod-flow-bot"}, "body": body, "html_url": "c"}})
 
     resume("mallory")
     assert status_of(tmp_path)["status"] == "paused" and wakes(fx) == []
@@ -484,10 +484,10 @@ def test_stale_pause_pr_does_not_overwrite_a_newer_plan(env):
         "## Log\n\n", "## Log\n\n- Team Chief: PAUSED: scope change\n")
     (tmp_path / "tasks" / "T-001.md").write_text(original, encoding="utf-8")
 
-    plan_pr = gh.add_pr(60, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": planned},
+    plan_pr = gh.add_pr(60, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": planned},
                         bases={"tasks/T-001.md": original})
     router.handle("pull_request", {"action": "opened", "pull_request": plan_pr})
-    pause_pr = gh.add_pr(61, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": paused_from_old},
+    pause_pr = gh.add_pr(61, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": paused_from_old},
                          bases={"tasks/T-001.md": original})
     router.handle("pull_request", {"action": "opened", "pull_request": pause_pr})
 
@@ -503,7 +503,7 @@ def test_stale_plan_pr_does_not_undo_a_status_change(env):
     original = task_text("in-progress")
     (tmp_path / "tasks" / "T-001.md").write_text(original.replace("status: in-progress", "status: awaiting-merge"), encoding="utf-8")
     planned = original.replace("Faster.", "Faster, with a plan.")
-    pr = gh.add_pr(62, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": planned},
+    pr = gh.add_pr(62, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": planned},
                    bases={"tasks/T-001.md": original})
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     meta, body = taskfile.load(str(tmp_path), "T-001")
@@ -536,7 +536,7 @@ def test_each_new_commit_on_a_code_pr_gets_a_review_job(env):
     pr = code_pr(gh)
     router.handle("pull_request", {"action": "opened", "pull_request": pr})
     router.handle("pull_request", {"action": "synchronize", "pull_request": pr})
-    task = gh.add_pr(31, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("in-progress")})
+    task = gh.add_pr(31, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task_text("in-progress")})
     router.handle("pull_request", {"action": "opened", "pull_request": task})
     assert wakes(fx) == [("reviewer", "code_pr.opened")] * 2
 
@@ -549,7 +549,7 @@ def test_merger_is_called_only_after_ci_and_review_both_pass(env):
     gh.checks["abc1234"] = [("completed", "success", 1, "github-actions")]
     router.handle("workflow_run", {"workflow_run": {"name": "CI", "status": "completed", "pull_requests": [{"number": 20}]}})
     assert status_of(tmp_path)["status"] == "in-progress"
-    verdict = {"issue": {"number": 20, "pull_request": {}}, "comment": {"user": {"login": "flow-demo-bot"}, "body": "/review passed", "html_url": "c"}}
+    verdict = {"issue": {"number": 20, "pull_request": {}}, "comment": {"user": {"login": "onenod-flow-bot"}, "body": "/review passed", "html_url": "c"}}
     router.handle("issue_comment", verdict)
     assert status_of(tmp_path)["status"] == "awaiting-merge"
 
@@ -558,7 +558,7 @@ def test_review_asking_for_changes_wakes_dev_lead(env):
     router, gh, fx, tmp_path = env
     write_task(tmp_path, "in-progress")
     code_pr(gh)
-    verdict = {"issue": {"number": 20, "pull_request": {}}, "comment": {"user": {"login": "flow-demo-bot"}, "body": "/review changes-requested: the error does not name the bad option", "html_url": "c"}}
+    verdict = {"issue": {"number": 20, "pull_request": {}}, "comment": {"user": {"login": "onenod-flow-bot"}, "body": "/review changes-requested: the error does not name the bad option", "html_url": "c"}}
     router.handle("issue_comment", verdict)
     assert wakes(fx) == [("dev_lead", "code_pr.changes_requested")]
 

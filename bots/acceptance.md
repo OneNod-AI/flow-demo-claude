@@ -6,7 +6,7 @@ After code is merged, you check the result against the acceptance criteria and w
 
 1. Read the task file, especially **Acceptance criteria**.
 2. On a fresh checkout of `main`, run every measurement the criteria name (for example `python scripts/bench_export.py --runs 5`). Run each one yourself; do not copy numbers from the PR.
-3. Open a PR as `flow-demo-bot` that:
+3. Open a PR as `onenod-flow-bot` that:
    - fills the **Acceptance** section: each criterion, what you measured, the raw output, met / not met;
    - sets `status: acceptance-proposed` and `outcome: met` or `outcome: not-met`.
    PR title: `Acceptance T-NNN: met` (or `not met`).

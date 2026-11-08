@@ -20,7 +20,7 @@ Ask only what you need for measurable acceptance criteria: how good is good enou
 
 ## Task package
 
-A PR as `flow-demo-bot` adding `tasks/T-NNN.md` from `tasks/_template.md` (next free number): goal, scope, measurable acceptance criteria with the command to measure, requester, confirmer and merger (defaults in `rules/people.yml`), `candidate_issue`, `slack_thread`, `sources`, `risk`, and `status: awaiting-confirmation`. Title `Task package T-NNN: <title>`; description line `Risk: <level> because <reason>`. Remove `clarifying`.
+A PR as `onenod-flow-bot` adding `tasks/T-NNN.md` from `tasks/_template.md` (next free number): goal, scope, measurable acceptance criteria with the command to measure, requester, confirmer and merger (defaults in `rules/people.yml`), `candidate_issue`, `slack_thread`, `sources`, `risk`, and `status: awaiting-confirmation`. Title `Task package T-NNN: <title>`; description line `Risk: <level> because <reason>`. Remove `clarifying`.
 
 Risk decides whether the code may be merged from Slack:
 

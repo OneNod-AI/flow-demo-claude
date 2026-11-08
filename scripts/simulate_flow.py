@@ -101,22 +101,22 @@ def main() -> int:
     router.handle("issues", {"action": "labeled", "label": {"name": "accepted"}, "issue": candidate})
 
     step("3. Product Bot clarifies, then opens the task package PR #2")
-    pr2 = gh.add_pr(2, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task("awaiting-confirmation")})
+    pr2 = gh.add_pr(2, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task("awaiting-confirmation")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr2})
 
     step("4. GATE: Carol (confirmer) replies in Slack `@Claude 确认 T-001`")
     print("BOT Claude Tag (team chief) relays it to PR #2 as /confirmed-via-slack")
     slack_ok = f"/confirmed-via-slack by @carol at {taskfile.now_iso()} link:{THREAD}"
     router.handle("issue_comment", {"issue": {"number": 2, "pull_request": {}, "labels": []},
-                                    "comment": {"user": {"login": "flow-demo-bot"}, "body": slack_ok, "html_url": "c"}})
+                                    "comment": {"user": {"login": "onenod-flow-bot"}, "body": slack_ok, "html_url": "c"}})
     print(f"   status now: {status(repo_dir)}")
 
     step("5. Dev Lead writes the plan (PR #3, status unchanged) and dispatches an executor job")
-    pr3 = gh.add_pr(3, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task("in-progress", plan="1. Replace per-row lookup with a join (agent A)")})
+    pr3 = gh.add_pr(3, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task("in-progress", plan="1. Replace per-row lookup with a join (agent A)")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr3})
 
     step("6. Executor job opens code PR #4 (the router dispatches a review job); CI fails on the first try")
-    pr4 = gh.add_pr(4, "flow-demo-bot", ["app/export_report.py"], body="Use a join\n\nTask: T-001\n", sha="c0ffee1")
+    pr4 = gh.add_pr(4, "onenod-flow-bot", ["app/export_report.py"], body="Use a join\n\nTask: T-001\n", sha="c0ffee1")
     gh.checks["c0ffee1"] = [("completed", "failure")]
     router.handle("pull_request", {"action": "opened", "pull_request": pr4})
     ci = {"workflow_run": {"name": "CI", "status": "completed", "pull_requests": [{"number": 4}]}}
@@ -145,18 +145,18 @@ def main() -> int:
 
     step("8b. Review job posts `/review passed` on PR #4")
     router.handle("issue_comment", {"issue": {"number": 4, "pull_request": {}, "labels": []},
-                                    "comment": {"user": {"login": "flow-demo-bot"}, "body": "/review passed", "html_url": "c"}})
+                                    "comment": {"user": {"login": "onenod-flow-bot"}, "body": "/review passed", "html_url": "c"}})
     print(f"   status now: {status(repo_dir)}")
 
     step("9. GATE: Mike (merger) replies in Slack `@Claude 合并 #4` (low risk, so allowed)")
     print("BOT Claude Tag (team chief) relays it to PR #4 as /merge-via-slack")
     merge = f"/merge-via-slack by @mike at {taskfile.now_iso()} link:{THREAD}"
     router.handle("issue_comment", {"issue": {"number": 4, "pull_request": {}, "labels": []},
-                                    "comment": {"user": {"login": "flow-demo-bot"}, "body": merge, "html_url": "c"}})
+                                    "comment": {"user": {"login": "onenod-flow-bot"}, "body": merge, "html_url": "c"}})
 
     step("10. Acceptance Bot measures on main and opens acceptance PR #5")
     measured = '{"orders": 10000, "runs": 5, "best_seconds": 0.08, "median_seconds": 0.09}'
-    pr5 = gh.add_pr(5, "flow-demo-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task(
+    pr5 = gh.add_pr(5, "onenod-flow-bot", ["tasks/T-001.md"], heads={"tasks/T-001.md": task(
         "acceptance-proposed", outcome="met", acceptance=f"- Under 1 s: met. Measured: `{measured}`")})
     router.handle("pull_request", {"action": "opened", "pull_request": pr5})
 
