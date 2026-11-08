@@ -114,6 +114,17 @@ router_may_merge_paths:
   - tasks/
   - records/
 
+# Which Claude model each team-bot job uses (flow/models.py). Executors start
+# from the task's risk and move right after a failed check run or rework, never
+# left. Running out of quota stops the job; it never moves to a weaker model.
+models:
+  ladder: [claude-sonnet-5-5, claude-opus-5-5]
+  default: claude-sonnet-5-5    # every bot other than the executor
+  executor_start_by_risk:
+    low: claude-sonnet-5-5
+    medium: claude-sonnet-5-5
+    high: claude-opus-5-5
+
 # Bots whose PRs are trusted to change task status (their GitHub login).
 bot_logins:
   - onenod-flow-bot             # role jobs (Claude Code in Actions) write with this account

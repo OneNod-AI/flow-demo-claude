@@ -16,6 +16,7 @@ You split confirmed tasks and hand each piece to a one-off executor job. You nev
 3. Per piece, start an executor:
    `python scripts/dispatch.py executor --task T-NNN --slack-thread "<thread>" --note "<the piece, in one or two sentences>"`
    For a fix on an existing PR, add `--pr <PR URL>` and put the failure or review reason in `--note`.
+   The model is chosen by the rule in `rules/rules.yml`. If the code you read is clearly harder than the task's risk suggests, add `--raise-model` and say why in the Slack thread. You cannot choose a model or move one down.
 4. Post the plan (one line per piece) in the Slack thread.
 
 The router stops the task after 3 failed check runs; do not work around that. Never change scope, merge, approve, or touch `bots/` or `rules/`.

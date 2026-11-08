@@ -17,7 +17,7 @@ on:
         description: Wake-up payload (JSON), as the router builds it
         default: "{}"
       model:
-        description: Claude model; empty = repository variable FLOW_CLAUDE_MODEL, else claude-sonnet-5-5
+        description: Claude model; empty = choose by the rule in rules/rules.yml
         default: ""
 
 permissions:
@@ -53,6 +53,23 @@ jobs:
           BOT: ${{ inputs.bot }}
           PAYLOAD: ${{ inputs.payload }}
         run: python -m flow.role prompt --bot "$BOT" --payload "$PAYLOAD" > "$RUNNER_TEMP/prompt.txt"
+      - name: Choose the model
+        id: model
+        env:
+          BOT: ${{ inputs.bot }}
+          PAYLOAD: ${{ inputs.payload }}
+          MODEL_INPUT: ${{ inputs.model }}
+        run: |
+          # Always name the model: without --model Claude Code defaults to Opus,
+          # which a standard Team seat runs out of quickly.
+          if [ -n "$MODEL_INPUT" ]; then
+            echo "model=$MODEL_INPUT" >> "$GITHUB_OUTPUT"
+            echo "model: $MODEL_INPUT (set by hand)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            model=$(python -m flow.role model --bot "$BOT" --payload "$PAYLOAD" 2> "$RUNNER_TEMP/why.txt")
+            echo "model=$model" >> "$GITHUB_OUTPUT"
+            echo "model: $(cat "$RUNNER_TEMP/why.txt")" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Claude Code
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -60,12 +77,8 @@ jobs:
           FLOW_DISPATCH_TOKEN: ${{ github.token }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
-          # Always name the model: without --model Claude Code defaults to Opus,
-          # which a standard Team seat runs out of quickly. The router's own
-          # dispatches send no model, so they use the repository variable.
-          MODEL: ${{ inputs.model || vars.FLOW_CLAUDE_MODEL || 'claude-sonnet-5-5' }}
+          MODEL: ${{ steps.model.outputs.model }}
         run: |
-          echo "model: $MODEL" >> "$GITHUB_STEP_SUMMARY"
           set +e
           claude -p "$(cat "$RUNNER_TEMP/prompt.txt")" \
             --model "$MODEL" \
