@@ -116,5 +116,5 @@ router_may_merge_paths:
 
 # Bots whose PRs are trusted to change task status (their GitHub login).
 bot_logins:
-  - flow-demo-bot             # role jobs (Claude Code in Actions) write with this account
+  - onenod-flow-bot             # role jobs (Claude Code in Actions) write with this account
   - claude[bot]               # Claude Tag (the team chief) acts as the Claude GitHub App

@@ -16,6 +16,9 @@ on:
       payload:
         description: Wake-up payload (JSON), as the router builds it
         default: "{}"
+      model:
+        description: Claude model; empty = repository variable FLOW_CLAUDE_MODEL, else claude-sonnet-5-5
+        default: ""
 
 permissions:
   contents: read
@@ -43,8 +46,8 @@ jobs:
         run: |
           pip install pyyaml pytest
           npm install -g @anthropic-ai/claude-code
-          git config user.name "flow-demo-bot"
-          git config user.email "flow-demo-bot@users.noreply.github.com"
+          git config user.name "onenod-flow-bot"
+          git config user.email "onenod-flow-bot@users.noreply.github.com"
       - name: Build the prompt
         env:
           BOT: ${{ inputs.bot }}
@@ -57,12 +60,28 @@ jobs:
           FLOW_DISPATCH_TOKEN: ${{ github.token }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
+          # Always name the model: without --model Claude Code defaults to Opus,
+          # which a standard Team seat runs out of quickly. The router's own
+          # dispatches send no model, so they use the repository variable.
+          MODEL: ${{ inputs.model || vars.FLOW_CLAUDE_MODEL || 'claude-sonnet-5-5' }}
         run: |
+          echo "model: $MODEL" >> "$GITHUB_STEP_SUMMARY"
+          set +e
           claude -p "$(cat "$RUNNER_TEMP/prompt.txt")" \
+            --model "$MODEL" \
             --output-format json \
             --max-turns 60 \
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(gh:*),Bash(git:*),Bash(python:*),Bash(python3:*),Bash(pytest:*),Bash(ls:*)" \
-            > "$RUNNER_TEMP/result.json" || true
+            > "$RUNNER_TEMP/result.json" 2> "$RUNNER_TEMP/stderr.txt"
+          code=$?
+          # Keep going so Report runs; Report fails the job when the run failed.
+          echo "claude exit code: $code" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$code" != 0 ]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 40 "$RUNNER_TEMP/stderr.txt" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 0
       - name: Report
         if: always()
         env:
@@ -71,3 +90,12 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_BOARD_CHANNEL: ${{ vars.SLACK_BOARD_CHANNEL }}
         run: python -m flow.role report --bot "$BOT" --payload "$PAYLOAD" --result "$RUNNER_TEMP/result.json"
+      - name: Keep the result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-result
+          path: |
+            ${{ runner.temp }}/result.json
+            ${{ runner.temp }}/stderr.txt
+          if-no-files-found: ignore

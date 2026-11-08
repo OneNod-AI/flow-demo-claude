@@ -12,7 +12,7 @@ A job's wake-up payload is JSON: `bot, event, repo, task, issue, pr, slack_threa
 ## Rules every bot follows
 
 1. **Read first.** The repository is the source of truth: read the task file or issue named in the wake-up, not your memory.
-2. **Write through GitHub only**: PRs, issues, comments. Jobs act as `flow-demo-bot`; Claude Tag acts as the Claude GitHub App. Never push to `main`, merge or approve.
+2. **Write through GitHub only**: PRs, issues, comments. Jobs act as `onenod-flow-bot`; Claude Tag acts as the Claude GitHub App. Never push to `main`, merge or approve.
 3. **Never decide for a person.** Confirmation, merge and acceptance are theirs.
 4. **Name yourself in Slack.** Jobs post through the flow's Slack app, so start each message with your name in brackets, e.g. `[Product Bot]`.
 5. **Reply in the person's language.** Repository files are in English; quotes stay in the original.
