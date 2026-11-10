@@ -33,6 +33,14 @@ def test_export_keeps_chinese_names(small_db, tmp_path):
     assert any("一" <= ch <= "鿿" for ch in text)
 
 
+def test_export_starts_with_utf8_bom(small_db, tmp_path):
+    out = tmp_path / "orders.csv"
+    export_report.export_csv(small_db, str(out))
+    data = out.read_bytes()
+    assert data[:3] == b"\xef\xbb\xbf"
+    assert data[3:].startswith(",".join(export_report.HEADER).encode())
+
+
 def test_amount_is_formatted_in_currency_units(small_db, tmp_path):
     out = tmp_path / "orders.csv"
     export_report.export_csv(small_db, str(out))
