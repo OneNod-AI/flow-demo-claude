@@ -41,6 +41,13 @@ def test_amount_is_formatted_in_currency_units(small_db, tmp_path):
     assert "." in first["amount"] and len(first["amount"].split(".")[1]) == 2
 
 
+def test_quiet_flag_prints_nothing_and_still_writes_file(tmp_path, capsys):
+    out = tmp_path / "orders.csv"
+    assert export_report.main([str(out), "--quiet"]) == 0
+    assert capsys.readouterr().out == ""
+    assert out.exists() and out.stat().st_size > 0
+
+
 def test_order_numbers_are_unique():
     # Planted flaky test: make_order_numbers can produce duplicates.
     # FLOW_DEMO_FLAKY_RATE=1 forces a failure (used for the circuit-breaker drill).

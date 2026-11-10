@@ -1,7 +1,7 @@
 """Export orders to CSV.
 
 Usage:
-    python -m app.export_report out.csv [--db path.sqlite]
+    python -m app.export_report out.csv [--db path.sqlite] [--quiet]
 
 Known problems (planted for the demo, do not fix them outside a task):
 - Slow: one customer lookup per order, on an unindexed column.
@@ -51,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Export orders to CSV")
     parser.add_argument("out")
     parser.add_argument("--db", default=None, help="SQLite file; default is a freshly seeded in-memory demo DB")
+    parser.add_argument("--quiet", action="store_true", help="do not print to stdout")
     args = parser.parse_args(argv)
     if args.db:
         conn = db.connect(args.db)
@@ -58,7 +59,8 @@ def main(argv: list[str] | None = None) -> int:
         conn = db.connect()
         db.seed(conn)
     count = export_csv(conn, args.out)
-    print(f"exported {count} rows to {args.out}")
+    if not args.quiet:
+        print(f"exported {count} rows to {args.out}")
     return 0
 
 
